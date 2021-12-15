@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <chrono>
+#include <cmath>
 #include "SigmoidalNeuron.hpp"
 
 double SigmoidalNeuron::generateRandNumInRange(double l, double r) {

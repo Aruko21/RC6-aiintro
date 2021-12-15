@@ -21,7 +21,7 @@ EXEC=lab4
 .PHONY: clean
 
 $(EXEC): $(SRCS) $(HDRS)
-	$(CC) $(INC) -o $(EXEC) $(SRCS) $(CXX_FLAGS)
+	$(CC) $(INC) -o $(EXEC) $(SRCS) $(CXX_FLAGS) -lm
 
 plot_gif:
 	gnuplot gnuplot_gif.gp

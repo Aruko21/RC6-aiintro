@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <ctime>
+#include <cmath>
 #include "SigmoidalNeuron.hpp"
 #include "SigmoidalMLP.hpp"
 
@@ -35,7 +36,7 @@ SigmoidalMLP::SigmoidalMLP(size_t inputSize, size_t outputSize, ConfigurationSin
 double SigmoidalMLP::targetFunction(std::vector<std::vector<double>>& D, std::vector<std::vector<double>>& Y) {
     double E = 0.0;
     for (size_t k = 0; k < D.size(); ++k) {
-        for (size_t j = 0; D.at(k).size(); ++j) {
+        for (size_t j = 0; j < D.at(k).size(); ++j) {
             E += std::pow(Y.at(k).at(j) - D.at(k).at(j), 2.0);
         }
     }
@@ -68,13 +69,13 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
             for (size_t i = 0; i < mlpOutput.size(); ++i) {
                 errors.push_back(mlpOutput.at(i) - DLearn.at(k).at(i));
             }
-            currLayerErrors.push_back(errors);
+            leftLayerErrors.push_back(errors);
         }
 
         std::vector<std::vector<std::vector<double>>> correctedWeights(this->layers.size());
 
         // Для каждого слоя
-        for (size_t l = this->layers.size() - 1; l >= 0; --l) {
+        for (int l = this->layers.size() - 1; l >= 0; --l) {
             std::vector<SigmoidalNeuron> layerNeurons = this->layers.at(l).getNeurons();
             currLayerErrors = leftLayerErrors;
 
@@ -99,7 +100,7 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
                         }
 
                         // Берем дельту для нейрона
-                        currLayerErrors.at(k).at(n) *= neuron.getDerivative(XLearn.at(k));
+                        currLayerErrors.at(k).at(n) *= neuron.getDerivative(prevLayersOutputs.at(k).at(l));
                         derivative += currLayerErrors.at(k).at(n) * xj;
                     }
                     // Коррекция веса
@@ -112,10 +113,11 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
 
             if (l > 0) {
                 std::vector<SigmoidalNeuron> leftLayerNeurons = this->layers.at(l - 1).getNeurons();
-                leftLayerErrors.resize(leftLayerNeurons.size());
 
-                for (size_t nLeft = 0; nLeft < leftLayerNeurons.size(); ++nLeft) {
-                    for (size_t k = 0; k < XLearn.size(); ++k) {
+                for (size_t k = 0; k < XLearn.size(); ++k) {
+                    leftLayerErrors.at(k).resize(leftLayerNeurons.size());
+
+                    for (size_t nLeft = 0; nLeft < leftLayerNeurons.size(); ++nLeft) {
                         double error = 0.0;
 
                         for (size_t n = 0; n < layerNeurons.size(); ++n) {
@@ -132,7 +134,14 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
         std::vector<std::vector<double>> prevE(DLearn.size());
         std::vector<std::vector<double>> currE(DLearn.size());
 
-        std::vector<SigmoidalMLPLayer> correctedLayers = this->layers;
+        std::vector<SigmoidalMLPLayer> correctedLayers;
+        for (size_t l = 0; l < this->layers.size(); ++l) {
+            size_t numberOfNeurons = this->layers.at(l).getNeurons().size();
+            size_t numberOfInputs = this->layers.at(l).getNeurons().at(0).getInputsNumber() - 1;
+            correctedLayers.emplace_back(SigmoidalMLPLayer(numberOfNeurons, numberOfInputs, this->configuration));
+        }
+
+//        std::copy(this->layers.begin(), this->layers.end(), std::back_inserter(correctedLayers));
         for (size_t l = 0; l < correctedLayers.size(); ++l) {
             std::vector<SigmoidalNeuron> neurons = correctedLayers.at(l).getNeurons();
             for (size_t n = 0; n < neurons.size(); ++n) {
@@ -179,7 +188,7 @@ std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X) {
     this->tmpOutputs.clear();
 
     for (size_t i = 0; i < this->layers.size(); ++i) {
-        std::vector<SigmoidalNeuron>& layerNeurons = this->layers.at(i).getNeurons();
+        std::vector<SigmoidalNeuron> layerNeurons = this->layers.at(i).getNeurons();
         for (size_t n = 0; n < layerNeurons.size(); ++n) {
             nextLayerOutputs.push_back(layerNeurons.at(n).getOutput(prevLayerOutputs));
         }
@@ -197,7 +206,7 @@ std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X, std::vector<
     std::vector<double> nextLayerOutputs;
 
     for (size_t i = 0; i < extLayers.size(); ++i) {
-        std::vector<SigmoidalNeuron>& layerNeurons = extLayers.at(i).getNeurons();
+        std::vector<SigmoidalNeuron> layerNeurons = extLayers.at(i).getNeurons();
         for (size_t n = 0; n < layerNeurons.size(); ++n) {
             nextLayerOutputs.push_back(layerNeurons.at(n).getOutput(prevLayerOutputs));
         }

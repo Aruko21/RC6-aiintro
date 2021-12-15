@@ -16,8 +16,9 @@ private:
 
     ConfigurationSingleton();
     ConfigurationSingleton( const ConfigurationSingleton&);
-    ConfigurationSingleton& operator=( ConfigurationSingleton& );
 public:
+    ConfigurationSingleton& operator=(const ConfigurationSingleton& extConfig) = default;
+
     static ConfigurationSingleton& getInstance() {
         static ConfigurationSingleton instance;
         return instance;

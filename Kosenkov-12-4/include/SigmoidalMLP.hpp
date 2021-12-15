@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <fstream>
+#include <cmath>
 
 #include "SigmoidalNeuron.hpp"
 #include "config.hpp"
@@ -11,8 +12,17 @@
 class SigmoidalMLPLayer {
 private:
     std::vector<SigmoidalNeuron> neurons;
-    ConfigurationSingleton& configuration;
+    ConfigurationSingleton& configuration = ConfigurationSingleton::getInstance();
 public:
+    SigmoidalMLPLayer() = default;
+    SigmoidalMLPLayer& operator=(const SigmoidalMLPLayer& layer) {
+        this->neurons = layer.neurons;
+        this->configuration = layer.configuration;
+        return *this;
+    }
+    SigmoidalMLPLayer(std::vector<SigmoidalNeuron> _neurons, ConfigurationSingleton& _configuration)
+        : neurons(_neurons), configuration(_configuration) {};
+
     explicit SigmoidalMLPLayer(size_t neuronsNumber, size_t prevLayerNeuronsNum, ConfigurationSingleton& configuration);
     size_t getNumberOfNeurons() { return this->neurons.size(); }
     std::vector<SigmoidalNeuron> getNeurons() { return this->neurons; };
@@ -34,8 +44,8 @@ public:
 //    bool test(std::vector<std::vector<double>>& XTest, std::vector<double>& DTest);
 
     void learn(std::vector<std::vector<double>>& XLearn, std::vector<std::vector<double>>& DLearn);
-    std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X);
-    std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X, std::vector<SigmoidalMLPLayer> extLayers);
+    std::vector<double> getOutput(std::vector<double>& X);
+    std::vector<double> getOutput(std::vector<double>& X, std::vector<SigmoidalMLPLayer> extLayers);
 
     ~SigmoidalMLP() = default;
 };

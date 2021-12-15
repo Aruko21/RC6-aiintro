@@ -20,6 +20,14 @@ private:
     double targetFunction(std::vector<double>& D, std::vector<double>& Y);
 public:
     explicit SigmoidalNeuron(int _inputs_num, ConfigurationSingleton& _configuration);
+    SigmoidalNeuron& operator=(const SigmoidalNeuron& neuron) {
+        this->inputsNumber = neuron.inputsNumber;
+        this->sigma = neuron.sigma;
+        this->weights = neuron.weights;
+        this->configuration = neuron.configuration;
+        return *this;
+    };
+
 
     static double generateRandNumInRange(double l, double r);
 
