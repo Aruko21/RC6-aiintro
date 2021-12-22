@@ -20,7 +20,6 @@
 #include "SigmoidalNeuron.hpp"
 #include "SigmoidalMLP.hpp"
 
-// Метод для конкатенации двух векторов
 template<typename T>
 std::vector<T> operator+(const std::vector<T>& v1, const std::vector<T>& v2){
     std::vector<T> vr(std::begin(v1), std::end(v1));
@@ -28,15 +27,6 @@ std::vector<T> operator+(const std::vector<T>& v1, const std::vector<T>& v2){
     return vr;
 }
 
-//void plot(std::vector<std::vector<double>>& X, SigmoidalNeuron& neuron) {
-//    std::ofstream file("plot_f(X).dat");
-//    for (auto & row : X) {
-//        for (auto & el : row) {
-//            file << el << " ";
-//        }
-//        file << neuron.activation_func(row) << std::endl;
-//    }
-//}
 
 int main(int argc, const char** argv) {
     ConfigurationSingleton& configuration = ConfigurationSingleton::getInstance();
@@ -44,24 +34,24 @@ int main(int argc, const char** argv) {
     std::vector<std::vector<double>> XLearn;
     std::vector<std::vector<double>> DLearn;
 
-    XLearn.emplace_back(std::vector<double>{1.0});
-    XLearn.emplace_back(std::vector<double>{2.0});
-    XLearn.emplace_back(std::vector<double>{3.0});
+    for (double x = 0; x < 7.0; x += 0.3) {
+        XLearn.emplace_back(std::vector<double>{x});
+        DLearn.emplace_back(std::vector<double>{std::sin(x)});
+    }
 
-    DLearn.emplace_back(std::vector<double>{1.0});
-    DLearn.emplace_back(std::vector<double>{2.0});
-    DLearn.emplace_back(std::vector<double>{3.0});
+    std::string initPlotFilename = configuration.getVariable("INIT_PLOT_FILENAME");
+    std::vector<std::vector<double>> initPlotData(XLearn.size());
+    for (size_t k = 0; k < XLearn.size(); ++k) {
+        initPlotData.at(k) = XLearn.at(k) + DLearn.at(k);
+    }
+    SigmoidalMLP::writePlotDataToFile(initPlotFilename, initPlotData);
 
-//    EllipseDataGenerator::writeToFile(configuration.getVariable("LEARN_DATA_FILENAME"), XLearn, DLearn);
-//    EllipseDataGenerator::writeToFile(configuration.getVariable("TEST_DATA_FILENAME"), XTest, DTest);
+    std::pair<double, double> scale{-1, 1};
+    SigmoidalMLP mlpNetwork(1, 1, scale, configuration);
 
-    SigmoidalMLP mlpNetwork(1, 1, configuration);
-//    std::vector<double> test = mlpNetwork.getOutput(XLearn);
-
-//    std::cout << "check output " << test.at(0) << std::endl;
     mlpNetwork.learn(XLearn, DLearn);
+    mlpNetwork.test(XLearn, DLearn);
 
-//    neuron.test(XTest, DTest);
 
     return 0;
 }
