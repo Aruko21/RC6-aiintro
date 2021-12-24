@@ -16,7 +16,7 @@ private:
     ConfigurationSingleton& configuration;
 
     double neuronOutput(std::vector<double>& X, std::vector<double>& extWeights);
-    double getUSum(std::vector<double>& X, std::vector<double>& extWeights);
+
     double targetFunction(std::vector<double>& D, std::vector<double>& Y);
 public:
     explicit SigmoidalNeuron(int _inputs_num, ConfigurationSingleton& _configuration);
@@ -35,6 +35,7 @@ public:
         std::vector<std::vector<double>>& XLearn,
         std::vector<double>& DLearn
     );
+    double getUSum(std::vector<double>& X, std::vector<double>& extWeights);
     bool test(std::vector<std::vector<double>>& XTest, std::vector<double>& DTest);
     double getOutput(std::vector<double>& X);
     double getDerivative(std::vector<double>& X);
