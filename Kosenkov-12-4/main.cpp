@@ -34,21 +34,17 @@ int main(int argc, const char** argv) {
     std::vector<std::vector<double>> XLearn;
     std::vector<std::vector<double>> DLearn;
 
-    /*
-    for (double x = 0; x < 15.0; x += 0.3) {
-        XLearn.emplace_back(std::vector<double>{x});
-        DLearn.emplace_back(std::vector<double>{std::sin(x)});
-    }
-     */
 
-    /*
-    for (double x = -3; x < 3.0; x += 0.5) {
-        XLearn.emplace_back(std::vector<double>{x});
-        DLearn.emplace_back(std::vector<double>{x * x});
-    }
-     */
-    
-    
+//    for (double x = 0; x < 15.0; x += 0.3) {
+//        XLearn.emplace_back(std::vector<double>{x});
+//        DLearn.emplace_back(std::vector<double>{std::sin(x)});
+//    }
+
+
+//    for (double x = -3; x < 3.0; x += 0.5) {
+//        XLearn.emplace_back(std::vector<double>{x});
+//        DLearn.emplace_back(std::vector<double>{x * x});
+//    }
 
     for (double x = -4.0; x < 4.0; x += 0.2) {
     	for (double y = -4.0; y < 4.0; y += 0.2) {
@@ -68,12 +64,6 @@ int main(int argc, const char** argv) {
     
     std::pair<double, double> scale{0, 10};
     SigmoidalMLP mlpNetwork(2, 1, scale, configuration);
-    //std::cout << "check transform: " << mlpNetwork.getScaledOutput(mlpNetwork.getNormalizedOutput(-1)) << std::endl;
-    
-    /*
-    std::pair<double, double> scale{-2, 2};
-    SigmoidalMLP mlpNetwork(2, 1, scale, configuration);
-    */
 
     mlpNetwork.learn(XLearn, DLearn);
     //mlpNetwork.test(XLearn, DLearn);

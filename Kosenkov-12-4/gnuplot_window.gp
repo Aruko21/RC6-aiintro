@@ -32,7 +32,7 @@ set ylabel 'y'
 DOTS = system("wc -l init_plot.dat")
 N = system("wc -l plots.dat") / (DOTS + 1)
 
-do for [i=0:N:10] {
+do for [i=0:N:1000] {
     LABEL = "i = " . (i+1)
     set obj 10 rect at graph 0.1,0.1 size char strlen(LABEL), char 1
     set obj 10 fillstyle empty border -1 front
