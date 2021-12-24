@@ -114,13 +114,13 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
     double learningCoefEPS = this->configuration.getVariableDouble("LEARNING_COEF_EPS");
     double targetFuncEPS = this->configuration.getVariableDouble("TARGET_FUNC_EPS");
 
-    std::vector<std::vector<double>> normalizedDLearn(DLearn.size());
-    for (size_t k = 0; k < DLearn.size(); ++k) {
-        normalizedDLearn.at(k).resize(DLearn.at(k).size());
-        for (size_t i = 0; i < DLearn.at(k).size(); ++i) {
-            normalizedDLearn.at(k).at(i) = this->getNormalizedOutput(DLearn.at(k).at(i));
-        }
-    }
+//    std::vector<std::vector<double>> normalizedDLearn(DLearn.size());
+//    for (size_t k = 0; k < DLearn.size(); ++k) {
+//        normalizedDLearn.at(k).resize(DLearn.at(k).size());
+//        for (size_t i = 0; i < DLearn.at(k).size(); ++i) {
+//            normalizedDLearn.at(k).at(i) = this->getNormalizedOutput(DLearn.at(k).at(i));
+//        }
+//    }
 
     // Заполнить файл обучения первоначальным графиком
     std::vector<std::vector<double>> initialMlpPlot(XLearn.size());
@@ -128,7 +128,8 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
         initialMlpPlot.at(k) = XLearn.at(k) + this->getOutput(XLearn.at(k));
     }
     this->appendPlotToFile(initialMlpPlot);
-
+    
+    size_t iterations = 1;
     while (learningCoef > learningCoefEPS && currentTargetFunc > targetFuncEPS) {
         // Страшный зверь - выходные значения с прошлого слоя для каждой выборки каждого слоя каждого нейрона
         std::vector<std::vector<std::vector<double>>> prevLayersOutputs;
@@ -146,7 +147,7 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
 
             // Заполнение ошибок (y_i - d_i) для каждого нейрона выходного слоя
             for (size_t i = 0; i < mlpOutput.size(); ++i) {
-                errors.push_back(mlpOutput.at(i) - normalizedDLearn.at(k).at(i));
+                errors.push_back(mlpOutput.at(i) - DLearn.at(k).at(i));
             }
             leftLayerErrors.push_back(errors);
         }
@@ -170,9 +171,11 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
                 std::vector<double> weights = neuron.getWeights();
                 correctedWeights.at(l).resize(layerNeurons.size());
 
-                // Умножение ошибок на проивзодную
-                for (size_t k = 0; k < XLearn.size(); ++k) {
-                    currLayerErrors.at(k).at(n) *= neuron.getDerivative(prevLayersOutputs.at(k).at(l));
+                if (l != this->layers.size() - 1) {
+                    // Умножение ошибок на проивзодную
+                    for (size_t k = 0; k < XLearn.size(); ++k) {
+                        currLayerErrors.at(k).at(n) *= neuron.getDerivative(prevLayersOutputs.at(k).at(l));
+                    }
                 }
 
                 // Для каждого синапса (связи)
@@ -223,8 +226,8 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
             }
         }
 
-        std::vector<std::vector<double>> prevE(normalizedDLearn.size());
-        std::vector<std::vector<double>> currE(normalizedDLearn.size());
+        std::vector<std::vector<double>> prevE(DLearn.size());
+        std::vector<std::vector<double>> currE(DLearn.size());
 
         std::vector<SigmoidalMLPLayer> correctedLayers;
         for (size_t l = 0; l < this->layers.size(); ++l) {
@@ -247,12 +250,25 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
             prevE.at(k) = this->getOutput(XLearn.at(k));
             currE.at(k) = this->getOutput(XLearn.at(k), correctedLayers);
         }
+        
+//        std::vector<std::vector<double>> prevEScaled(DLearn.size());
+//        std::vector<std::vector<double>> currEScaled(DLearn.size());
 
-        double targetFuncCurr = this->targetFunction(normalizedDLearn, currE);
-        double targetFuncPrev = this->targetFunction(normalizedDLearn, prevE);
+        
+//        for (size_t k = 0; k < prevE.size(); ++k) {
+//        	prevEScaled.at(k).resize(prevE.at(k).size());
+//        	currEScaled.at(k).resize(currE.at(k).size());
+//        	for (size_t j = 0; j < prevE.at(k).size(); ++j) {
+//        		prevEScaled.at(k).at(j) = this->getScaledOutput(prevE.at(k).at(j));
+//        		currEScaled.at(k).at(j) = this->getScaledOutput(currE.at(k).at(j));
+//        	}
+//        }
+                                           
+        double targetFuncCurr = this->targetFunction(DLearn, currE);
+        double targetFuncPrev = this->targetFunction(DLearn, prevE);
 
         if (targetFuncCurr < targetFuncPrev) {
-            std::cout << "Successed iteration" << std::endl;
+            //std::cout << "Successed iteration" << std::endl;
             if (successIterations > 2) {
                 learningCoef *= 2.0;
                 successIterations = 0;
@@ -263,8 +279,15 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
             this->layers = correctedLayers;
             currentTargetFunc = targetFuncCurr;
 
+            /*
             std::cout << "Current learning coefficient: " << learningCoef << std::endl;
-            std::cout << "Current target function value: " << currentTargetFunc << std::endl;
+            */
+
+            if (iterations % 100 == 0) {
+                std::cout << "Current target function value: " << currentTargetFunc << std::endl;
+            	std::cout << "EPOCH: " << iterations << std::endl;
+            }
+            ++iterations;
 
             std::vector<std::vector<double>> plotData(currE.size());
             for (size_t k = 0; k < currE.size(); ++k) {
@@ -272,11 +295,13 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
             }
             this->appendPlotToFile(plotData);
         } else {
-            std::cout << "Failed iteration" << std::endl;
+//            std::cout << "Failed iteration" << std::endl;
             learningCoef /= 2.0;
             successIterations = 0;
         }
     }
+    
+    std::cout << "Learning completed in " << iterations << " epochs." << std::endl;
 }
 
 void SigmoidalMLP::learnOnline(std::vector<double>& XLearn, std::vector<double>& DLearn) {
@@ -432,8 +457,15 @@ std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X) {
         currLayerOutputs.resize(layerNeurons.size());
         this->tmpOutputs.at(l).resize(layerNeurons.size());
 
-        for (size_t n = 0; n < layerNeurons.size(); ++n) {
-            currLayerOutputs.at(n) = layerNeurons.at(n).getOutput(prevLayerOutputs);
+        if (l != this->layers.size() - 1) {
+            for (size_t n = 0; n < layerNeurons.size(); ++n) {
+                currLayerOutputs.at(n) = layerNeurons.at(n).getOutput(prevLayerOutputs);
+            }
+        } else {
+            for (size_t n = 0; n < layerNeurons.size(); ++n) {
+                auto tmpWeights = layerNeurons.at(n).getWeights();
+                currLayerOutputs.at(n) = layerNeurons.at(n).getUSum(prevLayerOutputs, tmpWeights);
+            }
         }
 
         this->tmpOutputs.at(l) = prevLayerOutputs;
@@ -450,8 +482,16 @@ std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X, std::vector<
     for (size_t l = 0; l < extLayers.size(); ++l) {
         std::vector<SigmoidalNeuron> layerNeurons = extLayers.at(l).getNeurons();
         currLayerOutputs.resize(layerNeurons.size());
-        for (size_t n = 0; n < layerNeurons.size(); ++n) {
-            currLayerOutputs.at(n) = layerNeurons.at(n).getOutput(prevLayerOutputs);
+
+        if (l != this->layers.size() - 1) {
+            for (size_t n = 0; n < layerNeurons.size(); ++n) {
+                currLayerOutputs.at(n) = layerNeurons.at(n).getOutput(prevLayerOutputs);
+            }
+        } else {
+            for (size_t n = 0; n < layerNeurons.size(); ++n) {
+                auto tmpWeights = layerNeurons.at(n).getWeights();
+                currLayerOutputs.at(n) = layerNeurons.at(n).getUSum(prevLayerOutputs, tmpWeights);
+            }
         }
 
         prevLayerOutputs = currLayerOutputs;
