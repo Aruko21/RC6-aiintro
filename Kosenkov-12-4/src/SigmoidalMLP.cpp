@@ -89,16 +89,6 @@ double SigmoidalMLP::targetFunction(std::vector<std::vector<double>>& D, std::ve
     return 0.5 * E;
 }
 
-double SigmoidalMLP::targetFunctionOnline(std::vector<double>& D, std::vector<double>& Y) {
-    double E = 0.0;
-
-    for (size_t j = 0; j < D.size(); ++j) {
-        E += std::pow(Y.at(j) - D.at(j), 2.0);
-    }
-
-    return 0.5 * E;
-}
-
 double SigmoidalMLP::getNormalizedOutput(double output) {
     return (output - this->outputScale.first) * (1 - 0) / (this->outputScale.second - this->outputScale.first);
 }
@@ -131,7 +121,7 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
     
     size_t iterations = 1;
     while (learningCoef > learningCoefEPS && currentTargetFunc > targetFuncEPS) {
-        // Страшный зверь - выходные значения с прошлого слоя для каждой выборки каждого слоя каждого нейрона
+        // Выходные значения с прошлого слоя для каждой выборки каждого слоя каждого нейрона
         std::vector<std::vector<std::vector<double>>> prevLayersOutputs;
 
         // Накопленная ошибка нейрона для каждой выборки каждого нейрона
@@ -159,11 +149,6 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
         for (int l = this->layers.size() - 1; l >= 0; --l) {
             std::vector<SigmoidalNeuron> layerNeurons = this->layers.at(l).getNeurons();
             currLayerErrors = leftLayerErrors;
-//            std::cout << "ERRORS for " << l << "layer:" << std::endl;
-//            for (auto& errorsForK : currLayerErrors) {
-//                std::cout << errorsForK << std::endl;
-//            }
-//            std::cout << std::endl;
 
             // Для каждого нейрона в слое
             for (size_t n = 0; n < layerNeurons.size(); ++n) {
@@ -200,8 +185,6 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
                     // Коррекция веса
                     correctedWeights.at(l).at(n).at(j) = weights.at(j) - learningCoef * derivative;
                 }
-
-//                neuron.setWeights(weights);
             }
 
             // Расчет ошибок для обратного распространения
@@ -236,7 +219,6 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
             correctedLayers.emplace_back(SigmoidalMLPLayer(numberOfNeurons, numberOfInputs, this->configuration));
         }
 
-//        std::copy(this->layers.begin(), this->layers.end(), std::back_inserter(correctedLayers));
         for (size_t l = 0; l < correctedLayers.size(); ++l) {
             std::vector<SigmoidalNeuron>& neurons = correctedLayers.at(l).getNeurons();
             for (size_t n = 0; n < neurons.size(); ++n) {
@@ -279,11 +261,9 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
             this->layers = correctedLayers;
             currentTargetFunc = targetFuncCurr;
 
-            /*
-            std::cout << "Current learning coefficient: " << learningCoef << std::endl;
-            */
+            size_t iterationPrintStep = this->configuration.getVariableInt("PRINT_EVERY_ITERATION");
 
-            if (iterations % 100 == 0) {
+            if (iterations % iterationPrintStep == 0) {
                 std::cout << "Current target function value: " << currentTargetFunc << std::endl;
             	std::cout << "EPOCH: " << iterations << std::endl;
             }
@@ -302,147 +282,6 @@ void SigmoidalMLP::learn(std::vector<std::vector<double>>& XLearn, std::vector<s
     }
     
     std::cout << "Learning completed in " << iterations << " epochs." << std::endl;
-}
-
-void SigmoidalMLP::learnOnline(std::vector<double>& XLearn, std::vector<double>& DLearn) {
-    double learningCoef = this->configuration.getVariableDouble("LEARNING_COEF_INIT");
-    size_t successIterations = 0;
-    double currentTargetFunc = 1.0;
-
-    double learningCoefEPS = this->configuration.getVariableDouble("LEARNING_COEF_EPS");
-    double targetFuncEPS = this->configuration.getVariableDouble("TARGET_FUNC_EPS");
-
-    while (learningCoef > learningCoefEPS && currentTargetFunc > targetFuncEPS) {
-        // выходные значения с прошлого слоя для каждого слоя каждого нейрона
-        std::vector<std::vector<double>> prevLayersOutputs;
-
-        // Накопленная ошибка нейрона для каждого нейрона
-        std::vector<double> currLayerErrors;
-        std::vector<double> leftLayerErrors;
-
-        // Инициализация ошибок на последнем (выходном) слое
-        std::vector<double> mlpOutput = this->getOutput(XLearn);
-        prevLayersOutputs = this->tmpOutputs;
-        std::vector<double> errors;
-
-        // Заполнение ошибок (y_i - d_i) для каждого нейрона выходного слоя
-        for (size_t i = 0; i < mlpOutput.size(); ++i) {
-            errors.push_back(mlpOutput.at(i) - DLearn.at(i));
-        }
-        leftLayerErrors = errors;
-
-        // Массив скорректированных весов для каждого слоя для каждого нейрона
-        std::vector<std::vector<std::vector<double>>> correctedWeights(this->layers.size());
-
-        // Для каждого слоя
-        for (int l = this->layers.size() - 1; l >= 0; --l) {
-            std::vector<SigmoidalNeuron> layerNeurons = this->layers.at(l).getNeurons();
-            currLayerErrors = leftLayerErrors;
-            std::cout << "ERRORS for " << l << "layer: " << currLayerErrors << std::endl;
-            std::cout << std::endl;
-
-            // Для каждого нейрона в слое
-            for (size_t n = 0; n < layerNeurons.size(); ++n) {
-                SigmoidalNeuron& neuron = layerNeurons.at(n);
-                std::vector<double> weights = neuron.getWeights();
-                correctedWeights.at(l).resize(layerNeurons.size());
-
-                // Умножение ошибок на проивзодную
-                for (size_t k = 0; k < XLearn.size(); ++k) {
-                    std::cout << "test neuron output: " << neuron.getOutput(prevLayersOutputs.at(l)) << std::endl;
-                    std::cout << "test neuron derivative: " <<  neuron.getDerivative(prevLayersOutputs.at(l)) << std::endl;
-                    currLayerErrors.at(n) *= neuron.getDerivative(prevLayersOutputs.at(l));
-                }
-
-                // Для каждого синапса (связи)
-                for (size_t j = 0; j < neuron.getInputsNumber(); ++j) {
-                    correctedWeights.at(l).at(n).resize(neuron.getInputsNumber());
-
-//                    double derivative = 0.0;
-
-                    // xj - входное значение нейрона связи j
-                    double xj = 1.0;
-                    // Первая связь - поляризация
-                    if (j > 0) {
-                        // Выходные значения нейронов на предыдущем слое являются входными для текущего
-                        // (j - 1) т.к. j = 0 - поляризация и связи с нейронами начинаются с j = 1
-                        xj = prevLayersOutputs.at(l).at(j - 1);
-                    }
-
-                    double derivative = currLayerErrors.at(n) * xj;
-
-                    // Коррекция веса
-                    correctedWeights.at(l).at(n).at(j) = weights.at(j) - learningCoef * derivative;
-                }
-            }
-
-            // Расчет ошибок для обратного распространения
-            if (l > 0) {
-                std::vector<SigmoidalNeuron> leftLayerNeurons = this->layers.at(l - 1).getNeurons();
-
-                leftLayerErrors.resize(leftLayerNeurons.size());
-
-                // Для каждого нейрона из предыдущего слоя
-                for (size_t nLeft = 0; nLeft < leftLayerNeurons.size(); ++nLeft) {
-                    double error = 0.0;
-
-                    for (size_t n = 0; n < layerNeurons.size(); ++n) {
-                        SigmoidalNeuron& neuron = layerNeurons.at(n);
-                        // Взвешиваем ошибку между левым и текущим нейроном
-                        error += currLayerErrors.at(n) * neuron.getWeights().at(nLeft + 1);
-                    }
-                    leftLayerErrors.at(nLeft) = error;
-                }
-
-            }
-        }
-
-        std::vector<double> prevE(DLearn.size());
-        std::vector<double> currE(DLearn.size());
-
-        std::vector<SigmoidalMLPLayer> correctedLayers;
-        for (size_t l = 0; l < this->layers.size(); ++l) {
-            size_t numberOfNeurons = this->layers.at(l).getNeurons().size();
-            size_t numberOfInputs = this->layers.at(l).getNeurons().at(0).getInputsNumber() - 1;
-            correctedLayers.emplace_back(SigmoidalMLPLayer(numberOfNeurons, numberOfInputs, this->configuration));
-        }
-
-        for (size_t l = 0; l < correctedLayers.size(); ++l) {
-            std::vector<SigmoidalNeuron>& neurons = correctedLayers.at(l).getNeurons();
-            for (size_t n = 0; n < neurons.size(); ++n) {
-                SigmoidalNeuron& neuron = neurons.at(n);
-                neuron.setWeights(correctedWeights.at(l).at(n));
-                SigmoidalNeuron& neuronCompare = neurons.at(n);
-            }
-        }
-
-
-        prevE = this->getOutput(XLearn);
-        currE = this->getOutput(XLearn, correctedLayers);
-
-        double targetFuncCurr = this->targetFunctionOnline(DLearn, currE);
-        double targetFuncPrev = this->targetFunctionOnline(DLearn, prevE);
-
-        if (targetFuncCurr < targetFuncPrev) {
-            std::cout << "Successed iteration" << std::endl;
-            if (successIterations > 2) {
-                learningCoef *= 2.0;
-                successIterations = 0;
-            } else {
-                ++successIterations;
-            }
-
-            this->layers = correctedLayers;
-            currentTargetFunc = targetFuncCurr;
-
-            std::cout << "Current learning coefficient: " << learningCoef << std::endl;
-            std::cout << "Current target function value: " << currentTargetFunc << std::endl;
-        } else {
-            std::cout << "Failed iteration" << std::endl;
-            learningCoef /= 2.0;
-            successIterations = 0;
-        }
-    }
 }
 
 // Возвращает выходные значения для каждого нейрона в выходном слое
@@ -475,6 +314,7 @@ std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X) {
     return prevLayerOutputs;
 }
 
+// Возвращает выходные значения для каждого нейрона в выходном слое для указанной конфигурации сети
 std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X, std::vector<SigmoidalMLPLayer> extLayers) {
     std::vector<double> prevLayerOutputs = X;
     std::vector<double> currLayerOutputs;
@@ -495,7 +335,6 @@ std::vector<double> SigmoidalMLP::getOutput(std::vector<double>& X, std::vector<
         }
 
         prevLayerOutputs = currLayerOutputs;
-//        currLayerOutputs.clear();
     }
 
     return prevLayerOutputs;

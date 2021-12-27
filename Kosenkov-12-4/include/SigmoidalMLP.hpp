@@ -41,8 +41,7 @@ private:
     ConfigurationSingleton& configuration;
 
     double targetFunction(std::vector<std::vector<double>>& D, std::vector<std::vector<double>>& Y);
-    double targetFunctionOnline(std::vector<double>& D, std::vector<double>& Y);
-    
+
     void appendPlotToFile(std::vector<std::vector<double>>& plotData);
 
     // Выходные значения каждого предыдущего слоя каждого нейрона после последнего вызова getOutput
@@ -51,10 +50,8 @@ public:
     explicit SigmoidalMLP(size_t inputSize, size_t outputSize, std::pair<double, double>& outputScale, ConfigurationSingleton& _configuration);
     double getNormalizedOutput(double output);
     double getScaledOutput(double output);
-//    bool test(std::vector<std::vector<double>>& XTest, std::vector<double>& DTest);
 
     void learn(std::vector<std::vector<double>>& XLearn, std::vector<std::vector<double>>& DLearn);
-    void learnOnline(std::vector<double>& XLearn, std::vector<double>& DLearn);
     bool test(std::vector<std::vector<double>>& XTest, std::vector<std::vector<double>>& DTest);
     std::vector<double> getOutput(std::vector<double>& X);
     std::vector<double> getOutput(std::vector<double>& X, std::vector<SigmoidalMLPLayer> extLayers);
